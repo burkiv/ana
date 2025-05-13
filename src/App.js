@@ -1,226 +1,292 @@
 import './App.css';
+import Sidebar from './components/Sidebar'; // Sidebar import edildi
 import ChatWindow from './components/ChatWindow';
 import MessageInput from './components/MessageInput';
-import { useState, useEffect } from 'react'; // useEffect eklendi
+import { useState, useEffect, useCallback } from 'react';
+
+const LOCAL_STORAGE_SESSIONS_KEY = 'chatSessionsAnneAsistan';
+const LOCAL_STORAGE_MESSAGES_PREFIX = 'chatMessagesAnneAsistan_';
 
 function App() {
-  const [messages, setMessages] = useState([
-    { sender: 'assistant', text: 'Merhaba! Size nasıl yardımcı olabilirim?' }
-  ]);
-  const [threadId, setThreadId] = useState(null);
-  const [isLoading, setIsLoading] = useState(false); // Yüklenme durumu için state
+  const [chatSessions, setChatSessions] = useState(() => {
+    const savedSessions = localStorage.getItem(LOCAL_STORAGE_SESSIONS_KEY);
+    return savedSessions ? JSON.parse(savedSessions) : [];
+  });
+  const [activeThreadId, setActiveThreadId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
-  // İsteğe bağlı: Assistant'ı API ile oluşturmak için bir fonksiyon.
-  // Genellikle Assistant'lar önceden oluşturulur ve ID'leri kullanılır.
-  // eslint-disable-next-line no-unused-vars
-  const getOrCreateAssistant = async () => {
-    // Bu fonksiyonu kullanacaksanız, ASSISTANT_ID'yi dinamik olarak ayarlamanız gerekir.
-    try {
-      const assistantResponse = await fetch('https://api.openai.com/v1/assistants', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`,
-          'OpenAI-Beta': 'assistants=v2',
-        },
-        body: JSON.stringify({
-          name: "Anne Asistanı",
-          instructions: "Sen 55 yaşında bir annenin kişisel asistanısın. Nazik, sade Türkçe konuşuyorsun. Dua, tarif ve moral verici cümlelerle yanıt veriyorsun.",
-          model: "gpt-4o",
-        }),
-      });
-      const assistantData = await assistantResponse.json();
-      if (!assistantResponse.ok) {
-          console.error("Asistan oluşturulamadı:", assistantData);
-          throw new Error("Asistan oluşturulamadı");
-      }
-      console.log("Asistan oluşturuldu/getirildi:", assistantData.id);
-      return assistantData.id;
-    } catch (error) {
-      console.error("getOrCreateAssistant hatası:", error);
-      // Hata durumunda kullanıcıya bilgi verilebilir
-      setMessages(prevMessages => [...prevMessages, { sender: 'assistant', text: 'Asistan yapılandırmasında bir sorun oluştu.' }]);
-      return null;
-    }
+  const removeEmojis = (text) => {
+    if (!text) return '';
+    return text.replace(/[^\p{L}\p{N}\p{P}\p{Z}\s.,!?₺$%&()\\-]/gu, '');
   };
 
+  const speakText = useCallback((text) => {
+    if (window.speechSynthesis && text) {
+      const cleanedText = removeEmojis(text);
+      if (cleanedText.trim() === '') {
+        console.warn("Emoji temizlendikten sonra seslendirilecek metin kalmadı.");
+        return;
+      }
+      const utterance = new SpeechSynthesisUtterance(cleanedText);
+      utterance.lang = 'tr-TR';
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    }
+  }, []);
 
   useEffect(() => {
-    // Uygulama ilk yüklendiğinde yeni bir thread oluştur
-    const createThread = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch('https://api.openai.com/v1/threads', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`,
-            'OpenAI-Beta': 'assistants=v2',
-          }
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error?.message || 'Thread oluşturulamadı');
-        }
-        setThreadId(data.id);
-      } catch (error) {
-        console.error('Thread oluşturma hatası:', error);
-        setMessages(prevMessages => [...prevMessages, { sender: 'assistant', text: `Konuşma başlatılamadı: ${error.message}` }]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    if (!threadId) {
-      createThread();
+    localStorage.setItem(LOCAL_STORAGE_SESSIONS_KEY, JSON.stringify(chatSessions));
+  }, [chatSessions]);
+
+  useEffect(() => {
+    if (activeThreadId) {
+      const savedMessages = localStorage.getItem(`${LOCAL_STORAGE_MESSAGES_PREFIX}${activeThreadId}`);
+      setMessages(savedMessages ? JSON.parse(savedMessages) : []);
+    } else {
+      setMessages([]);
     }
-  }, [threadId]); // threadId değiştiğinde değil, sadece başlangıçta çalışması için. Ancak bağımlılık olarak kalmalı.
+  }, [activeThreadId]);
 
-  const handleSend = async (text) => {
-    if (!text.trim() || isLoading) return;
-
-    const assistantIdFromEnv = process.env.REACT_APP_ASSISTANT_ID; // Frontend .env'den
-    // const apiKeyFromEnv = process.env.REACT_APP_OPENAI_API_KEY; // Artık frontendde API key'e doğrudan ihtiyaç yok
-
-    console.log("Assistant ID from .env:", assistantIdFromEnv);
-
-    if (!assistantIdFromEnv) {
-      setMessages(prevMessages => [...prevMessages, { sender: 'assistant', text: 'Lütfen .env dosyanızda geçerli bir REACT_APP_ASSISTANT_ID tanımlayın.' }]);
-      return;
+  useEffect(() => {
+    if (activeThreadId && messages.length > 0) {
+      localStorage.setItem(`${LOCAL_STORAGE_MESSAGES_PREFIX}${activeThreadId}`, JSON.stringify(messages));
+    } else if (activeThreadId && messages.length === 0) {
+      localStorage.removeItem(`${LOCAL_STORAGE_MESSAGES_PREFIX}${activeThreadId}`);
     }
+  }, [messages, activeThreadId]);
 
-    if (!threadId) {
-      setMessages(prevMessages => [...prevMessages, { sender: 'assistant', text: 'Konuşma (thread) henüz hazır değil, lütfen biraz bekleyin.' }]);
-      return;
-    }
-
+  const createNewOpenAIThread = async () => {
     setIsLoading(true);
-    const userMessage = { sender: 'user', text };
-    setMessages(prevMessages => [...prevMessages, userMessage]);
-
     try {
-      // Proxy API'sine istek yap
-      const proxyResponse = await fetch('/api/sendMessage', { // Vercel'de bu path çalışacaktır
+      console.log("[App.js] OpenAI'den yeni thread oluşturuluyor...");
+      const response = await fetch('https://api.openai.com/v1/threads', { 
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`,
+          'OpenAI-Beta': 'assistants=v2',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          threadId: threadId,
-          messageContent: text,
-          assistantId: assistantIdFromEnv,
-        }),
+        body: JSON.stringify({})
       });
-
-      if (!proxyResponse.ok) {
-        const errorData = await proxyResponse.json();
-        console.error('Proxy API Hatası:', errorData);
-        throw new Error(errorData.error || 'Proxy sunucusundan yanıt alınamadı.');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Yeni OpenAI thread oluşturulamadı.');
       }
-
-      const proxyData = await proxyResponse.json();
-      const runId = proxyData.runId;
-
-      // Run durumunu kontrol etme ve mesajları alma (Bu kısımlar aynı kalabilir veya proxy'ye taşınabilir)
-      let runStatus;
-      let statusData;
-      do {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        const statusResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs/${runId}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`, // Bu GET isteği için hala key gerekebilir
-            'OpenAI-Beta': 'assistants=v2',
-          },
-        });
-        statusData = await statusResponse.json();
-        if (!statusResponse.ok) {
-          console.error("Run durumu alınırken API hatası:", statusData);
-          throw new Error(statusData.error?.message || 'Run durumu alınamadı');
-        }
-        runStatus = statusData.status;
-      } while (runStatus === 'queued' || runStatus === 'in_progress');
-
-      if (runStatus === 'completed') {
-        const messagesResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`, // Bu GET isteği için hala key gerekebilir
-            'OpenAI-Beta': 'assistants=v2',
-          },
-        });
-        const messagesData = await messagesResponse.json();
-        if (!messagesResponse.ok) {
-          throw new Error(messagesData.error?.message || 'Mesajlar alınamadı');
-        }
-
-        const assistantReply = messagesData.data
-          .filter(msg => msg.role === 'assistant' && msg.run_id === runId)
-          .sort((a, b) => b.created_at - a.created_at);
-
-        if (assistantReply.length > 0 && assistantReply[0].content[0].type === 'text') {
-          const assistantText = assistantReply[0].content[0].text.value;
-          setMessages(prevMessages => [...prevMessages, { sender: 'assistant', text: assistantText }]);
-          const utterance = new SpeechSynthesisUtterance(assistantText);
-          utterance.lang = 'tr-TR';
-          window.speechSynthesis.speak(utterance);
-        } else {
-          console.warn("Run tamamlandı ancak asistan mesajı bulunamadı veya formatı beklenmiyor.", assistantReply);
-        }
-      } else {
-        console.error('Run tamamlanamadı. Durum:', runStatus, 'Detaylar:', statusData);
-        let userErrorMessage = `İşlem tamamlanamadı: ${runStatus}`;
-        if (statusData && statusData.last_error && statusData.last_error.message) {
-          userErrorMessage += ` - ${statusData.last_error.message}`;
-        }
-        setMessages(prevMessages => [...prevMessages, { sender: 'assistant', text: userErrorMessage }]);
-      }
+      const newOpenAIThreadData = await response.json();
+      console.log("[App.js] Yeni OpenAI thread oluşturuldu:", newOpenAIThreadData.id);
+      return newOpenAIThreadData.id;
     } catch (error) {
-      console.error('handleSend hatası:', error);
-      setMessages(prevMessages => [...prevMessages, { sender: 'assistant', text: `Bir hata oluştu: ${error.message}` }]);
+      console.error('[App.js] OpenAI thread oluşturma hatası:', error);
+      setMessages(prev => [...prev, { id: `err-openaithread-${Date.now()}`, sender: 'assistant', text: `OpenAI ile bağlantı kurulamadı: ${error.message}` }]);
+      return null;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleMicClick = () => {
-    if (isLoading) return;
-    // Speech-to-Text (Web Speech API)
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'tr-TR';
-    recognition.interimResults = false; // Sadece kesin sonuçları al
-    recognition.maxAlternatives = 1;
+  const handleNewChat = useCallback(async () => { // useCallback ile sarmalandı
+    const newOpenAIThreadId = await createNewOpenAIThread();
+    if (newOpenAIThreadId) {
+      const newChatSession = {
+        id: `session-${Date.now()}`,
+        title: `Yeni Sohbet ${chatSessions.length + 1}`,
+        threadId: newOpenAIThreadId,
+        createdAt: Date.now(),
+      };
+      setChatSessions(prevSessions => [newChatSession, ...prevSessions]);
+      setActiveThreadId(newOpenAIThreadId);
+      setMessages([{ id: 'initial-new', sender: 'assistant', text: 'Merhaba! Yeni sohbetimize hoş geldin.' }]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatSessions.length]); // chatSessions.length değiştiğinde yeniden oluşturulması mantıklı olabilir
 
-    recognition.start();
-
-    recognition.onresult = (event) => {
-      const speechToText = event.results[0][0].transcript;
-      handleSend(speechToText); // Tanınan metni doğrudan gönder
-    };
-
-    recognition.onspeechend = () => {
-      recognition.stop();
-    };
-
-    recognition.onerror = (event) => {
-      console.error('Konuşma tanıma hatası:', event.error);
-      let errorMessage = 'Konuşma tanımada bir hata oluştu.';
-      if (event.error === 'no-speech') {
-        errorMessage = 'Ses algılanamadı. Lütfen tekrar deneyin.';
-      } else if (event.error === 'audio-capture') {
-        errorMessage = 'Mikrofon erişiminde bir sorun var.';
-      } else if (event.error === 'not-allowed') {
-        errorMessage = 'Mikrofon erişimine izin verilmedi.';
-      }
-      setMessages(prevMessages => [...prevMessages, { sender: 'assistant', text: errorMessage }]);
-    };
+  const handleSelectChat = (threadIdToSelect) => {
+    setActiveThreadId(threadIdToSelect);
   };
 
+  const handleRenameChat = (sessionId, newTitle) => {
+    setChatSessions(prevSessions => 
+      prevSessions.map(session => 
+        session.id === sessionId ? { ...session, title: newTitle } : session
+      )
+    );
+  };
+
+  const handleDeleteChat = (sessionIdToDelete, threadIdToDelete) => {
+    console.log(`[App.js] Siliniyor: Session ID ${sessionIdToDelete}, Thread ID ${threadIdToDelete}`);
+    // localStorage'dan mesajları sil
+    localStorage.removeItem(`${LOCAL_STORAGE_MESSAGES_PREFIX}${threadIdToDelete}`);
+    
+    // chatSessions state'inden sohbeti sil
+    const updatedSessions = chatSessions.filter(session => session.id !== sessionIdToDelete);
+    setChatSessions(updatedSessions);
+
+    // Eğer silinen sohbet aktif sohbet ise, durumu yönet
+    if (activeThreadId === threadIdToDelete) {
+      if (updatedSessions.length > 0) {
+        // Kalan sohbetlerden en sonuncusunu (veya ilkini) aktif yap
+        setActiveThreadId(updatedSessions[0].threadId); // En yeni olanı (listede ilk sırada)
+      } else {
+        // Hiç sohbet kalmadıysa yeni bir tane oluştur
+        setActiveThreadId(null); // Önce aktif thread'i temizle
+        handleNewChat(); // Bu yeni bir thread oluşturup onu aktif yapacak
+      }
+    }
+    // Eğer silinen sohbet aktif değilse, activeThreadId değişmez.
+  };
+
+  const processMessageWithThread = async (text, currentThreadId, assistantId, apiUrl) => {
+    setIsLoading(true);
+    const userMessage = { id: `user-${Date.now()}`, sender: 'user', text };
+    setMessages(prevMessages => [...prevMessages, userMessage]);
+
+    try {
+      const proxyResponse = await fetch(apiUrl, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          threadId: currentThreadId,
+          messageContent: text,
+          assistantId: assistantId,
+        }),
+      });
+
+      if (!proxyResponse.ok) {
+        const errorData = await proxyResponse.json();
+        throw new Error(errorData.error?.message || 'Proxy sunucusundan yanıt alınamadı (sendMessage).');
+      }
+      const proxyData = await proxyResponse.json();
+      const runId = proxyData.runId;
+
+      let runStatus, statusData, attempts = 0;
+      const maxAttempts = 20;
+
+      do {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        attempts++;
+        if (attempts > maxAttempts) throw new Error("Run durumu kontrolü zaman aşımına uğradı.");
+
+        const statusResponse = await fetch(`https://api.openai.com/v1/threads/${currentThreadId}/runs/${runId}`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`,
+            'OpenAI-Beta': 'assistants=v2',
+          },
+        });
+        statusData = await statusResponse.json();
+        if (!statusResponse.ok) throw new Error(statusData.error?.message || 'Run durumu alınamadı');
+        runStatus = statusData.status;
+      } while (runStatus === 'queued' || runStatus === 'in_progress');
+
+      if (runStatus === 'completed') {
+        const messagesResponse = await fetch(`https://api.openai.com/v1/threads/${currentThreadId}/messages?run_id=${runId}`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`,
+            'OpenAI-Beta': 'assistants=v2',
+          },
+        });
+        const messagesData = await messagesResponse.json();
+        if (!messagesResponse.ok) throw new Error(messagesData.error?.message || 'Mesajlar alınamadı');
+        
+        const assistantReply = messagesData.data
+          .filter(msg => msg.role === 'assistant' && msg.run_id === runId)
+          .sort((a, b) => a.created_at - b.created_at);
+
+        if (assistantReply.length > 0 && assistantReply[0].content[0]?.type === 'text') {
+          const assistantText = assistantReply[0].content[0].text.value;
+          setMessages(prevMessages => [...prevMessages, { id: `asst-${Date.now()}`, sender: 'assistant', text: assistantText }]);
+        } else {
+           setMessages(prev => [...prev, { id: `warn-${Date.now()}`, sender: 'assistant', text: "Bir yanıt aldım ancak gösterilemiyor." }]);
+        }
+      } else {
+        let userErrorMessage = `İşlem tamamlanamadı: ${runStatus}`;
+        if (statusData?.last_error?.message) userErrorMessage += ` - ${statusData.last_error.message}`;
+        else if (statusData?.incomplete_details?.reason) userErrorMessage += ` - Detay: ${statusData.incomplete_details.reason}`;
+        setMessages(prev => [...prev, { id: `err-run-${Date.now()}`, sender: 'assistant', text: userErrorMessage }]);
+      }
+    } catch (error) {
+      setMessages(prev => [...prev, { id: `err-proc-${Date.now()}`, sender: 'assistant', text: `Bir hata oluştu: ${error.message}` }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSend = async (text) => {
+    if (!text.trim() || isLoading || !activeThreadId) {
+      if(!activeThreadId) console.warn("Aktif sohbet (threadId) bulunamadı. Mesaj gönderilemiyor.");
+      return;
+    }
+    const assistantIdFromEnv = process.env.REACT_APP_ASSISTANT_ID;
+    const apiUrl = process.env.REACT_APP_API_URL; 
+    if (!assistantIdFromEnv || !apiUrl) {
+      setMessages(prev => [...prev, { id: `err-env-${Date.now()}`, sender: 'assistant', text: '.env dosyanızda API_URL veya ASSISTANT_ID eksik.' }]);
+      return;
+    }
+    await processMessageWithThread(text, activeThreadId, assistantIdFromEnv, apiUrl);
+  };
+
+  const handleMicClick = () => {
+    if (isLoading) return;
+    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      setMessages(prevMessages => [...prevMessages, { id: `err-${Date.now()}`, sender: 'assistant', text: "Üzgünüm, tarayıcınız sesle komut özelliğini desteklemiyor." }]);
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'tr-TR';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    setMessages(prevMessages => [...prevMessages, { id: `info-${Date.now()}`, sender: 'assistant', text: "Dinliyorum..." }]);
+    recognition.onstart = () => { setIsListening(true); setIsLoading(true); };
+    recognition.onspeechstart = () => console.log("Konuşma algılandı.");
+    recognition.onresult = (event) => {
+      const speechToText = event.results[0][0].transcript;
+      setMessages(prevMessages => prevMessages.filter(msg => msg.text !== "Dinliyorum..."));
+      handleSend(speechToText);
+    };
+    recognition.onspeechend = () => recognition.stop();
+    recognition.onend = () => { setIsListening(false); setIsLoading(false); setMessages(prevMessages => prevMessages.filter(msg => msg.text !== "Dinliyorum...")); };
+    recognition.onerror = (event) => {
+      setIsListening(false); setIsLoading(false);
+      let errorMessage = `Konuşma tanımada bir hata oluştu: ${event.error}`;
+      if (event.error === 'no-speech') errorMessage = 'Ses algılanamadı.';
+      else if (event.error === 'audio-capture') errorMessage = 'Mikrofon sorunu.';
+      else if (event.error === 'not-allowed') errorMessage = 'Mikrofon izni yok.';
+      setMessages(prevMessages => prevMessages.filter(msg => msg.text !== "Dinliyorum..."));
+      setMessages(prevMessages => [...prevMessages, { id: `err-${Date.now()}`, sender: 'assistant', text: errorMessage }]);
+    };
+    recognition.start();
+  };
+
+  useEffect(() => {
+    if (chatSessions.length === 0) {
+      handleNewChat();
+    } else if (!activeThreadId && chatSessions.length > 0) {
+      // Eğer aktif thread yoksa ama session varsa, en sonuncuyu (en yeni oluşturulanı) aktif yap
+      // chatSessions zaten en yeniden eskiye sıralı geliyor Sidebar'dan dolayı, ama burada tekrar sıralayalım
+      const sortedSessions = [...chatSessions].sort((a,b) => b.createdAt - a.createdAt);
+      setActiveThreadId(sortedSessions[0].threadId);
+    }
+  }, [chatSessions, activeThreadId, handleNewChat]); // Bağımlılıklar eklendi
+
   return (
-    <div className="App">
-      <header className="app-header">
-        <h1>Dünyanın en iyi annesinin kişisel asistanı</h1>
-      </header>
-      <ChatWindow messages={messages} />
-      <MessageInput onSend={handleSend} onMicClick={handleMicClick} disabled={isLoading} />
+    <div className="app-layout">
+      <Sidebar 
+        chatSessions={chatSessions} 
+        onNewChat={handleNewChat} 
+        onSelectChat={handleSelectChat} 
+        activeThreadId={activeThreadId}
+        onRenameChat={handleRenameChat}
+        onDeleteChat={handleDeleteChat} // onDeleteChat prop'u Sidebar'a iletiliyor
+      />
+      <div className="chat-area">
+        <header className="app-header">
+          <h1>Dünyanın en iyi annesinin kişisel asistanı</h1>
+        </header>
+        <ChatWindow messages={messages} onSpeakText={speakText} isLoading={isLoading && messages[messages.length -1]?.sender === 'user'} />
+        <MessageInput onSend={handleSend} onMicClick={handleMicClick} disabled={isLoading || !activeThreadId} isListening={isListening} />
+      </div>
     </div>
   );
 }

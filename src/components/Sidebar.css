@@ -1,0 +1,48 @@
+.sidebar {
+  width: 260px;
+  background-color: #fdf6f8; /* Çok açık pembe */
+  border-right: 1px solid #ffe0e8; /* Yumuşak pembe sınır */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-shadow: 2px 0 10px rgba(231, 170, 190, 0.1);
+}
+
+.new-chat-button {
+  background-color: #ffafcc; /* Ana pembe tonu */
+  color: white;
+  border: none;
+  padding: 12px 15px;
+  margin: 15px;
+  border-radius: 8px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+}
+
+.new-chat-button:hover {
+  background-color: #ff8fab; /* Biraz daha koyu pembe */
+}
+
+.chat-list {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 0 10px 10px 10px; /* Alt ve yan boşluklar */
+}
+
+/* Scrollbar stilleri (isteğe bağlı) */
+.chat-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-list::-webkit-scrollbar-thumb {
+  background-color: #ffc3d4; /* Pembe scrollbar */
+  border-radius: 10px;
+}

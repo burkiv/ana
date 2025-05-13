@@ -1,71 +1,78 @@
-.message-input {
+.message-input-area { /* Eski .message-input yerine */
   display: flex;
-  align-items: center;
-  padding: 15px 20px;
-  background-color: #f8f9fa; /* Hafif gri arka plan */
-  border-top: 1px solid #e0e0e0;
-  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+  align-items: center; /* Dikeyde ortalamak için */
+  padding: 12px 15px;
+  background-color: rgba(255, 255, 255, 0.7); /* Hafif transparan beyaz */
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(231, 170, 190, 0.3); /* Yumuşak pembe sınır */
+  box-shadow: 0 -4px 15px rgba(231, 170, 190, 0.15);
 }
 
-.message-input input[type="text"] {
+.message-input-area textarea { /* input[type="text"] yerine textarea */
   flex-grow: 1;
   padding: 12px 18px;
-  border: 1px solid #ced4da;
-  border-radius: 25px; /* Yuvarlak kenarlar */
-  font-size: 1rem;
-  margin: 0 10px; /* Butonlarla arasında boşluk */
+  border: 1px solid #ffe0f0; /* Çok açık pembe sınır */
+  border-radius: 22px; 
+  font-size: 0.95rem;
+  font-family: 'Quicksand', sans-serif;
+  margin: 0 10px; 
   line-height: 1.5;
+  background-color: #fffafa; /* Çok açık pembe/beyaz arka plan */
+  color: #5c5c5c;
+  resize: none; /* Kullanıcının yeniden boyutlandırmasını engelle */
+  min-height: 24px; /* rows=1 için yaklaşık yükseklik */
+  max-height: 100px; /* Maksimum yükseklik, scrollbar çıkar */
+  overflow-y: auto; /* İçerik taşarsa scrollbar */
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.message-input input[type="text"]:focus {
-  border-color: #80bdff;
+.message-input-area textarea:focus {
+  border-color: #ffafcc; 
   outline: 0;
-  box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+  box-shadow: 0 0 0 0.2rem rgba(255, 175, 204, .35); 
 }
 
-.message-input button {
-  padding: 10px 15px;
+.message-input-area button {
+  padding: 0; /* İkonu tam ortalamak için */
   border: none;
-  border-radius: 50%; /* Tamamen yuvarlak butonlar */
-  background-color: #007bff;
-  color: white;
-  font-size: 1.2rem; /* İkon boyutu için */
+  border-radius: 50%; 
+  background-color: transparent; /* Arka planı transparan yapalım */
+  color: #ff8fab; /* Pembe ikon rengi */
   cursor: pointer;
-  transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+  transition: background-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px; /* Sabit genişlik */
-  height: 48px; /* Sabit yükseklik */
+  width: 44px; 
+  height: 44px; 
 }
 
-.message-input button:hover {
-  background-color: #0056b3;
+.message-input-area button:hover {
+  background-color: rgba(255, 175, 204, 0.15); /* Hafif pembe hover */
+  transform: scale(1.1);
 }
 
-.message-input button:active {
+.message-input-area button:active {
   transform: scale(0.95);
 }
 
-.message-input button.mic-button {
-  background-color: #28a745; /* Yeşil mikrofon butonu */
-  order: -1; /* Mikrofon butonunu sola almak için */
+.message-input-area button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: scale(1);
+  background-color: transparent;
 }
 
-.message-input button.mic-button:hover {
-  background-color: #1e7e34;
+.message-input-area button.mic-button {
+  /* order: -1; zaten solda */
 }
 
-.message-input button.send-button {
-  background-color: #007bff; /* Mavi gönder butonu */
+.message-input-area button.mic-button.listening {
+  color: #e91e63; /* Dinlerken daha canlı pembe */
+  animation: pulseMicAnimation 1.5s infinite ease-in-out;
 }
 
-.message-input button.send-button:hover {
-  background-color: #0056b3;
-}
-
-/* Butonların içindeki ikonlar için (eğer metin yerine ikon kullanırsanız) */
-.message-input button svg {
-  width: 20px;
-  height: 20px;
+@keyframes pulseMicAnimation { /* Mikrofon için farklı bir pulse */
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.15); opacity: 1; }
 }

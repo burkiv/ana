@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
-  const { threadId, messageContent, assistantId } = req.body;
+  const { threadId, messageContent, assistantId } = req.body; // memoryContext kaldırıldı
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Mesajı thread'e ekle
+    // 1. Mesajı thread'e ekle (Bu kısım aynı kalabilir)
     const addMessageResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
       method: 'POST',
       headers: {
@@ -35,14 +35,17 @@ export default async function handler(req, res) {
     if (!addMessageResponse.ok) {
       const errorData = await addMessageResponse.json();
       console.error('OpenAI Mesaj Ekleme Hatası:', errorData);
-      return res.status(addMessageResponse.status).json({ 
-        error: 'OpenAI API\'sine mesaj eklenirken hata oluştu.', 
-        details: errorData 
+      return res.status(addMessageResponse.status).json({
+        error: 'OpenAI API\'sine mesaj eklenirken hata oluştu.',
+        details: errorData
       });
     }
-    // Mesaj ekleme başarılı, devam et
 
     // 2. Run başlat
+    const runRequestBody = {
+      assistant_id: assistantId,
+    };
+
     const createRunResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs`, {
       method: 'POST',
       headers: {
@@ -50,17 +53,13 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${apiKey}`,
         'OpenAI-Beta': 'assistants=v2',
       },
-      body: JSON.stringify({
-        assistant_id: assistantId,
-        // İsterseniz burada ek talimatlar veya model override'ları da ekleyebilirsiniz
-        // instructions: "Lütfen kullanıcıya nazikçe cevap ver.",
-      }),
+      body: JSON.stringify(runRequestBody), // Sadece assistant_id içeriyor
     });
 
     if (!createRunResponse.ok) {
       const errorData = await createRunResponse.json();
       console.error('OpenAI Run Başlatma Hatası:', errorData);
-      return res.status(createRunResponse.status).json({ 
+      return res.status(createRunResponse.status).json({
         error: 'OpenAI API\'sinde run başlatılırken hata oluştu.',
         details: errorData
       });
@@ -70,7 +69,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ runId: runData.id });
 
   } catch (error) {
-    console.error('Proxy API Hatası:', error);
-    return res.status(500).json({ error: 'İç sunucu hatası.', details: error.message });
+    console.error('Proxy API Hatası (sendMessage):', error);
+    return res.status(500).json({ error: 'İç sunucu hatası (sendMessage).', details: error.message });
   }
 }

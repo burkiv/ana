@@ -1,0 +1,110 @@
+.chat-item {
+  padding: 12px 15px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.9rem;
+  color: #6a525a; /* Koyu pembe/gri metin */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  word-break: break-word; /* Uzun başlıklar için */
+}
+
+.chat-item:hover {
+  background-color: #ffeef2; /* Çok açık pembe hover */
+}
+
+.chat-item.active {
+  background-color: #ffc3d4; /* Aktif sohbet için pembe */
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.chat-item.active .rename-button {
+    color: #ffffff; /* Aktifken ikon rengi */
+}
+
+.chat-item.active .action-button {
+    color: #ffffff;
+}
+
+.chat-title {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 10px;
+}
+
+.chat-item-actions { /* Butonları sarmalamak için */
+  display: flex;
+  align-items: center;
+}
+
+.action-button { /* Genel aksiyon butonu stili */
+  background: none;
+  border: none;
+  color: #b48ead; 
+  cursor: pointer;
+  padding: 5px;
+  margin-left: 4px; /* Butonlar arası boşluk */
+  opacity: 0.6;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.action-button:hover {
+  opacity: 1;
+}
+
+.rename-button {
+  background: none;
+  border: none;
+  color: #b48ead; /* Soluk pembe ikon */
+  cursor: pointer;
+  padding: 5px;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.rename-button:hover {
+  opacity: 1;
+}
+
+.delete-button:hover {
+  color: #e53935; /* Silme butonu için kırmızı hover rengi */
+}
+
+.rename-controls {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.rename-input {
+  flex-grow: 1;
+  padding: 6px 8px;
+  border: 1px solid #ffc3d4;
+  border-radius: 5px;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.9rem;
+  margin-right: 5px;
+}
+
+.rename-action-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  margin-left: 3px;
+}
+
+.rename-action-button.confirm {
+  color: #4caf50; /* Yeşil */
+}
+
+.rename-action-button.cancel {
+  color: #f44336; /* Kırmızı */
+}
