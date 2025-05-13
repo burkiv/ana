@@ -1,4 +1,22 @@
+body {
+  margin: 0;
+  font-family: 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, #fce4ec 0%, #e0f2f1 100%); /* Pembe - Açık Gri/Mavi degrade */
+  color: #333;
+}
+
 .App {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 800px; /* Uygulama genişliğini sınırlayalım */
+  margin: 0 auto; /* Ortalamak için */
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1); /* Hafif bir gölge */
+  background-color: #ffffff; /* İçerik alanı için beyaz arka plan */
   text-align: center;
 }
 
@@ -36,3 +54,19 @@
     transform: rotate(360deg);
   }
 }
+
+.app-header {
+  background-color: #ff80ab; /* Başlık için pembe tonu */
+  color: white;
+  padding: 15px 20px;
+  text-align: center;
+  font-size: 1.2em;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.app-header h1 {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Diğer genel stiller buraya eklenebilir */

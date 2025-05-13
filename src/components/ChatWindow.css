@@ -1,0 +1,33 @@
+.chat-window {
+  flex-grow: 1; /* Kalan alanı kaplaması için */
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 20px;
+  background-color: transparent; /* App.css'teki degradeyi göstermek için */
+}
+
+.message {
+  margin: 8px 0;
+  padding: 12px 18px;
+  border-radius: 25px; /* Daha yuvarlak kenarlar */
+  max-width: 75%;
+  font-size: 1rem; /* Okunabilir font boyutu */
+  line-height: 1.6;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  word-wrap: break-word; /* Uzun kelimelerin taşmasını engelle */
+}
+
+.message.user {
+  align-self: flex-end;
+  background-color: #e0f7fa; /* Açık mavi */
+  color: #00796b; /* Koyu turkuaz metin */
+  border-bottom-right-radius: 5px; /* Sağ alt köşeyi daha az yuvarlak yapalım */
+}
+
+.message.assistant {
+  align-self: flex-start;
+  background-color: #fce4ec; /* Açık pembe */
+  color: #c2185b; /* Koyu pembe metin */
+  border-bottom-left-radius: 5px; /* Sol alt köşeyi daha az yuvarlak yapalım */
+}

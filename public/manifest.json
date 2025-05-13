@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Anne Asistan",
+  "name": "Anne Yapay Zeka Asistanı",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,16 +10,21 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "display": "fullscreen",
+  "theme_color": "#f0f0f0",
+  "background_color": "#ffffff",
+  "description": "Anneniz için kişisel yapay zeka asistanı.",
+  "lang": "tr-TR",
+  "orientation": "portrait"
 }
