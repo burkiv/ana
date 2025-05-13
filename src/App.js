@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar'; // Sidebar import edildi
 import ChatWindow from './components/ChatWindow';
 import MessageInput from './components/MessageInput';
 import { useState, useEffect, useCallback } from 'react';
+import { FiMenu, FiX } from 'react-icons/fi'; // Hamburger ve Kapatma ikonları
 
 const LOCAL_STORAGE_SESSIONS_KEY = 'chatSessionsAnneAsistan';
 const LOCAL_STORAGE_MESSAGES_PREFIX = 'chatMessagesAnneAsistan_';
@@ -16,6 +17,7 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isSidebarOpenOnMobile, setIsSidebarOpenOnMobile] = useState(false);
 
   const removeEmojis = (text) => {
     if (!text) return '';
@@ -86,7 +88,7 @@ function App() {
     }
   };
 
-  const handleNewChat = useCallback(async () => { // useCallback ile sarmalandı
+  const handleNewChat = useCallback(async () => {
     const newOpenAIThreadId = await createNewOpenAIThread();
     if (newOpenAIThreadId) {
       const newChatSession = {
@@ -98,12 +100,13 @@ function App() {
       setChatSessions(prevSessions => [newChatSession, ...prevSessions]);
       setActiveThreadId(newOpenAIThreadId);
       setMessages([{ id: 'initial-new', sender: 'assistant', text: 'Merhaba! Yeni sohbetimize hoş geldin.' }]);
+      setIsSidebarOpenOnMobile(false); // Yeni sohbet seçildiğinde mobilde sidebar'ı kapat
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chatSessions.length]); // chatSessions.length değiştiğinde yeniden oluşturulması mantıklı olabilir
+  }, [chatSessions.length]);
 
   const handleSelectChat = (threadIdToSelect) => {
     setActiveThreadId(threadIdToSelect);
+    setIsSidebarOpenOnMobile(false); // Sohbet seçildiğinde mobilde sidebar'ı kapat
   };
 
   const handleRenameChat = (sessionId, newTitle) => {
@@ -116,25 +119,18 @@ function App() {
 
   const handleDeleteChat = (sessionIdToDelete, threadIdToDelete) => {
     console.log(`[App.js] Siliniyor: Session ID ${sessionIdToDelete}, Thread ID ${threadIdToDelete}`);
-    // localStorage'dan mesajları sil
     localStorage.removeItem(`${LOCAL_STORAGE_MESSAGES_PREFIX}${threadIdToDelete}`);
-    
-    // chatSessions state'inden sohbeti sil
     const updatedSessions = chatSessions.filter(session => session.id !== sessionIdToDelete);
     setChatSessions(updatedSessions);
-
-    // Eğer silinen sohbet aktif sohbet ise, durumu yönet
     if (activeThreadId === threadIdToDelete) {
       if (updatedSessions.length > 0) {
-        // Kalan sohbetlerden en sonuncusunu (veya ilkini) aktif yap
-        setActiveThreadId(updatedSessions[0].threadId); // En yeni olanı (listede ilk sırada)
+        setActiveThreadId(updatedSessions[0].threadId); 
       } else {
-        // Hiç sohbet kalmadıysa yeni bir tane oluştur
-        setActiveThreadId(null); // Önce aktif thread'i temizle
-        handleNewChat(); // Bu yeni bir thread oluşturup onu aktif yapacak
+        setActiveThreadId(null); 
+        handleNewChat(); 
       }
     }
-    // Eğer silinen sohbet aktif değilse, activeThreadId değişmez.
+    setIsSidebarOpenOnMobile(false); // Sohbet silindiğinde mobilde sidebar'ı kapat
   };
 
   const processMessageWithThread = async (text, currentThreadId, assistantId, apiUrl) => {
@@ -263,30 +259,36 @@ function App() {
     if (chatSessions.length === 0) {
       handleNewChat();
     } else if (!activeThreadId && chatSessions.length > 0) {
-      // Eğer aktif thread yoksa ama session varsa, en sonuncuyu (en yeni oluşturulanı) aktif yap
-      // chatSessions zaten en yeniden eskiye sıralı geliyor Sidebar'dan dolayı, ama burada tekrar sıralayalım
       const sortedSessions = [...chatSessions].sort((a,b) => b.createdAt - a.createdAt);
       setActiveThreadId(sortedSessions[0].threadId);
     }
-  }, [chatSessions, activeThreadId, handleNewChat]); // Bağımlılıklar eklendi
+  }, [chatSessions, activeThreadId, handleNewChat]);
+
+  const toggleMobileSidebar = () => {
+    setIsSidebarOpenOnMobile(!isSidebarOpenOnMobile);
+  };
 
   return (
-    <div className="app-layout">
+    <div className={`app-layout ${isSidebarOpenOnMobile ? 'sidebar-open-mobile' : ''}`}> 
       <Sidebar 
         chatSessions={chatSessions} 
         onNewChat={handleNewChat} 
         onSelectChat={handleSelectChat} 
         activeThreadId={activeThreadId}
         onRenameChat={handleRenameChat}
-        onDeleteChat={handleDeleteChat} // onDeleteChat prop'u Sidebar'a iletiliyor
+        onDeleteChat={handleDeleteChat}
       />
-      <div className="chat-area">
+      <div className="chat-area"> 
         <header className="app-header">
+          <button className="hamburger-menu" onClick={toggleMobileSidebar}>
+            {isSidebarOpenOnMobile ? <FiX size={24}/> : <FiMenu size={24}/>}
+          </button>
           <h1>Dünyanın en iyi annesinin kişisel asistanı</h1>
         </header>
         <ChatWindow messages={messages} onSpeakText={speakText} isLoading={isLoading && messages[messages.length -1]?.sender === 'user'} />
         <MessageInput onSend={handleSend} onMicClick={handleMicClick} disabled={isLoading || !activeThreadId} isListening={isListening} />
       </div>
+      {isSidebarOpenOnMobile && <div className="overlay" onClick={toggleMobileSidebar}></div>}
     </div>
   );
 }
